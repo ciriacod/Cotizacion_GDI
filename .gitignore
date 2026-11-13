@@ -1,2 +1,29 @@
+# Entorno virtual
 .venv/
+venv/
+env/
+
+# Archivos compilados y temporales de Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Empaquetado / Ejecutables (PyInstaller)
+build/
+dist/
+*.spec
+
+# Cachés de pruebas y linters
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Configuración local de VS Code y sistema operativo
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Variables de entorno locales (si llegas a usar .env para credenciales)
+.env
