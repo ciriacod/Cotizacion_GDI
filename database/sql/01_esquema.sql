@@ -5,7 +5,8 @@
 -- Gestor: MySQL 8.0+
 -- ===================================================
 
-CREATE DATABASE IF NOT EXISTS cotizacion CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+DROP DATABASE IF EXISTS cotizacion;
+CREATE DATABASE cotizacion CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE cotizacion;
 
 -- ---------------------------------------------------
