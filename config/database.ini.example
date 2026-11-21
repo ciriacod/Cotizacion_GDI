@@ -1,0 +1,8 @@
+[mysql]
+host = 127.0.0.1
+port = 3306
+database = cotizacion
+user = jp_app
+
+# La contrasena se solicita al iniciar la primera operacion de BD.
+# No guardes credenciales aqui ni compartas contrasenas por correo o chat.
