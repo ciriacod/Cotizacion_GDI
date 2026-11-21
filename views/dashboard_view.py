@@ -5,7 +5,7 @@ from tkinter import ttk
 
 class DashboardView(ttk.Frame):
 
-    def __init__(self, parent, colors, on_new_quote=None):
+    def __init__(self, parent, colors, on_new_quote=None, service=None, password=""):
 
         super().__init__(
             parent,
@@ -14,6 +14,9 @@ class DashboardView(ttk.Frame):
 
         self.colors = colors
         self.on_new_quote = on_new_quote
+        self.service = service
+        self.password = password
+        self.card_values = {}
 
         self.configure(
             padding=(25, 22)
@@ -134,13 +137,15 @@ class DashboardView(ttk.Frame):
                 font=("Segoe UI", 9)
             ).pack(anchor="w")
 
-            tk.Label(
+            value_label = tk.Label(
                 body,
                 text=value,
                 bg=self.colors["white"],
                 fg=self.colors["navy"],
                 font=("Segoe UI", 25, "bold")
-            ).pack(anchor="w", pady=(8, 2))
+            )
+            value_label.pack(anchor="w", pady=(8, 2))
+            self.card_values[title] = value_label
 
             tk.Label(
                 body,
@@ -281,3 +286,38 @@ class DashboardView(ttk.Frame):
         self.empty_message.pack(
             pady=(0, 18)
         )
+        self._load_data()
+
+    def _load_data(self):
+        """Carga indicadores y actividad reciente desde procedimientos almacenados."""
+        if self.service is None:
+            return
+        try:
+            summary = self.service.resumen_dashboard(self.password) or {}
+            mapping = {
+                "Cotizaciones registradas": "total_cotizaciones",
+                "Cotizaciones pendientes": "pendientes",
+                "Cotizaciones aprobadas": "aprobadas",
+                "Clientes registrados": "clientes",
+            }
+            for title, key in mapping.items():
+                self.card_values[title].configure(text=str(summary.get(key, 0) or 0))
+
+            recent = self.service.recientes(self.password, 8) or []
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            for row in recent:
+                self.tree.insert("", "end", values=(
+                    row.get("nmr_cotizacion", ""),
+                    row.get("fecha_emision", ""),
+                    row.get("razon_social", ""),
+                    row.get("responsable", ""),
+                    row.get("estado", ""),
+                ))
+            self.empty_message.configure(
+                text="" if recent else "Todavía no hay cotizaciones registradas."
+            )
+        except Exception as exc:
+            self.empty_message.configure(
+                text=f"No se pudo cargar el resumen: {exc}"
+            )

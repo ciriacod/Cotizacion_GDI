@@ -15,8 +15,8 @@ class ConnectionView(ttk.Frame):
     def _build(self):
         card = ttk.LabelFrame(self, text="Configuración de conexión e instalación inicial", padding=22)
         card.pack(fill="both", expand=True, padx=50, pady=30)
-        ttk.Label(card, text="Bienvenido a JP Cotiza", font=("Segoe UI", 20, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
-        ttk.Label(card, text="Conecta con un servidor MySQL 8.0 o superior. Si la base no existe, el asistente la creará e instalará las tablas, triggers, procedimientos y catálogos.", wraplength=760).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 20))
+        ttk.Label(card, text="Bienvenido a COTIZEP", font=("Segoe UI", 20, "bold")).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 5))
+        ttk.Label(card, text="Conecta con un servidor MySQL 8.0.16 o superior. Si la base no existe, el asistente la creará e instalará las tablas, triggers, procedimientos y catálogos.", wraplength=760).grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 20))
         defaults = self.database.config
         self.fields = {}
         specs = [("host", "Servidor / Host", defaults["host"]), ("port", "Puerto", str(defaults["port"])),
@@ -35,7 +35,7 @@ class ConnectionView(ttk.Frame):
         ttk.Label(card, text="Importante: MySQL Server debe estar instalado y activo. No se necesita Docker ni crear manualmente la base. El usuario MySQL debe tener permisos para crear bases de datos, tablas, triggers y procedimientos.", wraplength=760).grid(row=8, column=0, columnspan=2, sticky="w", pady=(0, 14))
         self.status = tk.StringVar(value="Listo para conectar.")
         ttk.Label(card, textvariable=self.status, foreground="#315B85", wraplength=760).grid(row=9, column=0, columnspan=2, sticky="w", pady=8)
-        self.button = ttk.Button(card, text="Conectar e inicializar JP Cotiza", command=self._connect)
+        self.button = ttk.Button(card, text="Conectar e inicializar COTIZEP", command=self._connect)
         self.button.grid(row=10, column=1, sticky="e", pady=(14, 0))
 
     def _connect(self):

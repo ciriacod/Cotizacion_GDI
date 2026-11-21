@@ -1,4 +1,4 @@
-"""Inicialización no destructiva del esquema MySQL de JP Cotiza."""
+"""Inicialización no destructiva del esquema MySQL de COTIZEP."""
 from __future__ import annotations
 import re
 from database.connection import resource_path
@@ -57,6 +57,21 @@ class DatabaseInstaller:
         created = False
         try:
             cur = server.cursor()
+            cur.execute("SELECT VERSION()")
+            version_row = cur.fetchone()
+            server_version = str(version_row[0]) if version_row else "0.0.0"
+            version_text = server_version.split("-", 1)[0]
+            if "mariadb" in server_version.lower():
+                raise RuntimeError("COTIZEP requiere MySQL Server 8.0.16+; MariaDB no está validado para esta instalación.")
+            try:
+                version_parts = tuple(int(part) for part in version_text.split(".")[:3])
+            except ValueError:
+                version_parts = (0, 0, 0)
+            if version_parts < (8, 0, 16):
+                raise RuntimeError(
+                    f"COTIZEP requiere MySQL 8.0.16 o superior para aplicar restricciones CHECK. "
+                    f"Versión detectada: {version_text}."
+                )
             cur.execute("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=%s", (self.database.database_name,))
             schema_exists = cur.fetchone() is not None
             if not schema_exists:
@@ -84,32 +99,54 @@ class DatabaseInstaller:
             missing = EXPECTED_TABLES - existing
             if missing:
                 raise RuntimeError("La base de datos existe pero está incompleta. Faltan tablas: " + ", ".join(sorted(missing)) + ". No se borró ni modificó información; restaura una copia o usa una BD vacía.")
+            # Determina los objetos requeridos directamente desde los scripts versionados.
+            sql_core = (self.sql_dir / "02_triggers_procedimientos.sql").read_text(encoding="utf-8-sig")
+            sql_reports = (self.sql_dir / "04_procedimientos_reportes.sql").read_text(encoding="utf-8-sig")
+            required_core = set(re.findall(r"CREATE\s+PROCEDURE\s+(\w+)", sql_core, re.IGNORECASE))
+            required_reports = set(re.findall(r"CREATE\s+PROCEDURE\s+(\w+)", sql_reports, re.IGNORECASE))
+            required_triggers = set(re.findall(r"CREATE\s+TRIGGER\s+(\w+)", sql_core, re.IGNORECASE))
+
             cur.execute("SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA=%s AND ROUTINE_TYPE='PROCEDURE'", (self.database.database_name,))
             procedures = {row[0] for row in cur.fetchall()}
             cur.execute("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=%s", (self.database.database_name,))
             triggers = {row[0] for row in cur.fetchall()}
-            required_procedures = {
-                "sp_crear_cliente", "sp_actualizar_cliente", "sp_eliminar_cliente",
-                "sp_crear_contacto_cliente", "sp_crear_empleado", "sp_listar_empleados_activos",
-                "sp_actualizar_empleado", "sp_eliminar_empleado", "sp_crear_producto_servicio",
-                "sp_eliminar_producto_servicio", "sp_crear_cotizacion", "sp_agregar_detalle_cotizacion",
-                "sp_actualizar_cotizacion", "sp_eliminar_detalles_cotizacion", "sp_actualizar_estado_cotizacion",
-            }
-            required_triggers = {"trg_generar_cod_cliente", "trg_generar_cod_pro_ser", "trg_generar_nmr_cotizacion"}
-            routines_missing = bool(required_procedures - procedures or required_triggers - triggers)
-            cur.close(); server.close()
+            cur.execute(
+                """SELECT cc.CHECK_CLAUSE
+                   FROM information_schema.CHECK_CONSTRAINTS cc
+                   INNER JOIN information_schema.TABLE_CONSTRAINTS tc
+                     ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA
+                    AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
+                   WHERE tc.CONSTRAINT_SCHEMA = %s
+                     AND tc.TABLE_NAME = 'COTIZACION'
+                     AND tc.CONSTRAINT_NAME = 'ck_cotizacion_impuesto'""",
+                (self.database.database_name,),
+            )
+            tax_constraint = cur.fetchone()
+            tax_migration_needed = bool(
+                tax_constraint and "EXONERADO" not in str(tax_constraint[0]).upper()
+            )
+            core_missing = bool((required_core - procedures) or (required_triggers - triggers))
+            reports_missing = bool(required_reports - procedures)
+            cur.close()
+            server.close()
 
             target = self.database.connect(password)
             try:
                 cursor = target.cursor()
-                if routines_missing:
+                if tax_migration_needed:
+                    self._run_script(cursor, self.sql_dir / "05_migracion_regimen_tributario.sql")
+                if core_missing:
                     self._run_script(cursor, self.sql_dir / "02_triggers_procedimientos.sql")
-                # El script de catálogos es idempotente (INSERT IGNORE / NOT EXISTS).
+                if reports_missing:
+                    self._run_script(cursor, self.sql_dir / "04_procedimientos_reportes.sql")
+                # El catálogo inicial utiliza INSERT IGNORE / NOT EXISTS y puede
+                # ejecutarse de forma segura en cada inicialización.
                 self._run_script(cursor, self.sql_dir / "03_catalogos_iniciales.sql")
                 target.commit()
                 cursor.close()
             except Exception:
-                target.rollback(); raise
+                target.rollback()
+                raise
             finally:
                 target.close()
 
@@ -120,15 +157,17 @@ class DatabaseInstaller:
                 procedures = {row[0] for row in cursor.fetchall()}
                 cursor.execute("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=%s", (self.database.database_name,))
                 triggers = {row[0] for row in cursor.fetchall()}
-                if required_procedures - procedures:
-                    raise RuntimeError("No se instalaron todos los procedimientos: " + ", ".join(sorted(required_procedures - procedures)))
+                missing_procedures = (required_core | required_reports) - procedures
+                if missing_procedures:
+                    raise RuntimeError("No se instalaron todos los procedimientos: " + ", ".join(sorted(missing_procedures)))
                 if required_triggers - triggers:
                     raise RuntimeError("No se instalaron todos los triggers: " + ", ".join(sorted(required_triggers - triggers)))
                 cursor.close()
             finally:
                 verify.close()
             return {"database": self.database.database_name, "tables": len(existing), "created": created,
-                    "procedures_refreshed": routines_missing, "seeded": True}
+                    "procedures_refreshed": core_missing or reports_missing,
+                    "tax_migrated": tax_migration_needed, "seeded": True}
         finally:
             try: server.close()
             except Exception: pass

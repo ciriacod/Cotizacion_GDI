@@ -74,8 +74,8 @@ class CotizacionesView(ttk.Frame):
         self._combo(form, "forma_pago", "Forma de pago", 2, 3, 20)
         self._combo(form, "garantia", "Garantía", 4, 0, 20)
         self._combo(form, "impuesto", "Impuesto", 4, 1, 16)
-        self.vars["impuesto"].configure(values=["SIN IGV", "CON IGV"])
-        self.vars["impuesto"].bind("<<ComboboxSelected>>", lambda _e: self._actualizar_totales())
+        self.vars["impuesto"].configure(values=["SIN IGV", "CON IGV", "EXONERADO", "INAFECTO"])
+        self.vars["impuesto"].bind("<<ComboboxSelected>>", self._impuesto_cambiado)
         self._entry(form, "porcentaje_igv", "Porcentaje IGV", 4, 2, 12)
         self._entry(form, "vigencia_dias", "Vigencia (días)", 4, 3, 12)
         self._entry(form, "tiempo_ejecucion", "Tiempo de ejecución", 6, 0)
@@ -91,7 +91,7 @@ class CotizacionesView(ttk.Frame):
         self._entry(detail, "cantidad", "Cantidad entera", 0, 1, 10)
         self._entry(detail, "precio", "Precio unitario", 0, 2, 14)
         self._entry(detail, "alcance", "Alcance técnico (opcional)", 0, 3, 30)
-        ttk.Button(detail, text="Agregar partida", command=self._agregar_detalle).grid(row=1, column=4, padx=6, pady=5, sticky="ew")
+        ttk.Button(detail, text="Agregar partida", style="JP.TButton", command=self._agregar_detalle).grid(row=1, column=4, padx=6, pady=5, sticky="ew")
         cols = ("item", "codigo", "descripcion", "unidad", "cantidad", "precio", "subtotal", "alcance")
         self.tree_detalles = ttk.Treeview(detail, columns=cols, show="headings", height=5)
         names = {"item":"Ítem", "codigo":"Código", "descripcion":"Descripción", "unidad":"Unidad", "cantidad":"Cant.", "precio":"P. unitario", "subtotal":"Subtotal", "alcance":"Alcance técnico"}
@@ -100,16 +100,16 @@ class CotizacionesView(ttk.Frame):
             self.tree_detalles.heading(c, text=names[c])
             self.tree_detalles.column(c, width=widths[c], anchor="w" if c in ("descripcion", "alcance") else "center")
         self.tree_detalles.grid(row=2, column=0, columnspan=5, sticky="nsew", padx=6, pady=(5, 3))
-        ttk.Button(detail, text="Retirar partida seleccionada", command=self._quitar_detalle).grid(row=3, column=0, sticky="w", padx=6, pady=(2, 5))
+        ttk.Button(detail, text="Retirar partida seleccionada", style="JP.TButton", command=self._quitar_detalle).grid(row=3, column=0, sticky="w", padx=6, pady=(2, 5))
         self.total_label = ttk.Label(detail, text="Subtotal: 0.00 | IGV: 0.00 | Total: 0.00", font=("Segoe UI", 10, "bold"))
         self.total_label.grid(row=3, column=1, columnspan=4, sticky="e", padx=6, pady=(2, 5))
         detail.rowconfigure(2, weight=1)
 
         actions = ttk.Frame(self.tab_editor)
         actions.pack(fill="x")
-        ttk.Button(actions, text="Nueva cotización", command=self._nuevo).pack(side="left", padx=(0, 5))
-        ttk.Button(actions, text="Guardar cotización", command=self._guardar).pack(side="left", padx=5)
-        ttk.Button(actions, text="Actualizar listado", command=self._cargar_lista).pack(side="left", padx=5)
+        ttk.Button(actions, text="Nueva cotización", style="JP.TButton", command=self._nuevo).pack(side="left", padx=(0, 5))
+        ttk.Button(actions, text="Guardar cotización", style="JP.TButton", command=self._guardar).pack(side="left", padx=5)
+        ttk.Button(actions, text="Actualizar listado", style="JP.TButton", command=self._cargar_lista).pack(side="left", padx=5)
         ttk.Label(actions, text="Los borradores requieren al menos una partida para guardarse.", foreground="#64748B").pack(side="right")
 
         search = ttk.Frame(self.tab_listado)
@@ -191,6 +191,7 @@ class CotizacionesView(ttk.Frame):
 
     def _nuevo(self):
         self.numero_edicion = None
+        self.vars["porcentaje_igv"].configure(state="normal")
         for key, widget in self.vars.items():
             if isinstance(widget, ttk.Entry):
                 widget.delete(0, "end")
@@ -203,6 +204,7 @@ class CotizacionesView(ttk.Frame):
         self.vars["exclusiones"].insert(0, "No aplica")
         self.vars["observaciones"].insert(0, "Sin observaciones")
         self.vars["impuesto"].set("SIN IGV")
+        self._impuesto_cambiado()
         self.vars["contacto"]["values"] = ["Sin contacto"]
         self.vars["contacto"].set("Sin contacto")
         self.detalles.clear()
@@ -251,6 +253,20 @@ class CotizacionesView(ttk.Frame):
         for i, line in enumerate(self.detalles, start=1):
             subtotal = Decimal(line["cantidad"]) * Decimal(str(line["precio_unitario"]))
             self.tree_detalles.insert("", "end", iid=str(i - 1), values=(i, line["cod_pro_ser"], line.get("descripcion", ""), line.get("unidad", ""), line["cantidad"], f"{Decimal(str(line['precio_unitario'])):.2f}", f"{subtotal:.2f}", line.get("alcance_tecnico") or ""))
+
+    def _impuesto_cambiado(self, _event=None):
+        regimen = self.vars["impuesto"].get() or "SIN IGV"
+        porcentaje = self.vars["porcentaje_igv"]
+        porcentaje.configure(state="normal")
+        if regimen == "CON IGV":
+            if porcentaje.get().strip() in ("", "0", "0.0", "0.00"):
+                porcentaje.delete(0, "end")
+                porcentaje.insert(0, "18")
+        else:
+            porcentaje.delete(0, "end")
+            porcentaje.insert(0, "0")
+            porcentaje.configure(state="disabled")
+        self._actualizar_totales()
 
     def _actualizar_totales(self):
         try:
@@ -344,6 +360,7 @@ class CotizacionesView(ttk.Frame):
             contact_label = next((label for label, ident in self.maps.get("contacto", {}).items() if ident == contact_id), "Sin contacto")
             self.vars["contacto"].set(contact_label)
             fields = {"fecha_emision":"fecha_emision", "impuesto":"impuesto", "porcentaje_igv":"porcentaje_igv", "vigencia_dias":"vigencia_dias", "tiempo_ejecucion":"tiempo_ejecucion", "tiempo_entrega":"tiempo_entrega", "exclusiones":"exclusiones", "observaciones":"observaciones"}
+            self.vars["porcentaje_igv"].configure(state="normal")
             for key, field in fields.items():
                 self.vars[key].delete(0, "end")
                 self.vars[key].insert(0, str(h.get(field) or ""))
@@ -352,7 +369,7 @@ class CotizacionesView(ttk.Frame):
                 "cantidad": x["cantidad"], "precio_unitario": x["precio_unitario"], "alcance_tecnico": x.get("alcance_tecnico")
             } for x in data["detalles"]]
             self._refrescar_detalles()
-            self._actualizar_totales()
+            self._impuesto_cambiado()
             self.tabs.select(self.tab_editor)
         except Exception as error:
             messagebox.showerror("Abrir cotización", str(error), parent=self)
