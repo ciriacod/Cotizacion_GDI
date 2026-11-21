@@ -1,26 +1,9 @@
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
-from database.connection import DatabaseConnection
-
-from services.cliente_service import ClienteService
-from services.empleado_service import EmpleadoService
-from services.catalogo_service import CatalogoService
-from services.producto_servicio_service import ProductoServicioService
-from services.parametro_service import ParametroService
-from services.cotizacion_service import CotizacionService
-from services.reporte_service import ReporteService
-
-from views.clientes_view import ClientesView
 from views.dashboard_view import DashboardView
-from views.empleados_view import EmpleadosView
-from views.catalogos_personal_view import CatalogosPersonalView
-from views.catalogos_view import CatalogosView
-from views.parametros_view import ParametrosView
-from views.cotizaciones_view import CotizacionesView
-from views.reportes_view import ReportesView
-from views.connection_view import ConnectionView
+from views.placeholder_view import PlaceholderView
 
 
 class MainWindow:
@@ -29,12 +12,13 @@ class MainWindow:
         self.root = tk.Tk()
 
         self.root.title(
-            "JP Cotiza | Gestión de Cotizaciones"
+            "Sistema de Gestión de Cotizaciones JP"
         )
 
         self.root.geometry("1280x800")
         self.root.minsize(1050, 650)
 
+        # Paleta institucional
         self.colors = {
             "navy": "#16365C",
             "navy_light": "#244B75",
@@ -52,44 +36,13 @@ class MainWindow:
         self.current_module = None
         self.navigation_buttons = {}
 
-        self.database = DatabaseConnection()
-
-        self.cliente_service = ClienteService(
-            self.database
-        )
-
-        self.empleado_service = EmpleadoService(
-            self.database
-        )
-
-        # Servicio de Cargos y Especialidades.
-        self.catalogo_personal_service = CatalogoService(
-            self.database
-        )
-
-        # Servicio de Productos y Servicios.
-        self.producto_servicio_service = ProductoServicioService(
-            self.database
-        )
-
-        # Servicio de los seis catálogos de parámetros.
-        self.parametro_service = ParametroService(
-            self.database
-        )
-
-        self.cotizacion_service = CotizacionService(self.database)
-        self.reporte_service = ReporteService(self.database)
-        self.database_password = None
-
         self.configure_styles()
         self.build_interface()
-        self.show_connection_page()
 
-    # =================================================
-    # ESTILOS
-    # =================================================
+        self.show_page("dashboard")
 
     def configure_styles(self):
+
         style = ttk.Style(self.root)
         style.theme_use("clam")
 
@@ -111,8 +64,8 @@ class MainWindow:
 
         style.configure(
             "JP.Nav.TButton",
-            font=("Segoe UI", 9),
-            padding=(12, 10),
+            font=("Segoe UI", 10),
+            padding=(14, 12),
             background=self.colors["navy"],
             foreground="#DCE6F1",
             anchor="w",
@@ -131,8 +84,8 @@ class MainWindow:
 
         style.configure(
             "JP.NavActive.TButton",
-            font=("Segoe UI", 9, "bold"),
-            padding=(12, 10),
+            font=("Segoe UI", 10, "bold"),
+            padding=(14, 12),
             background=self.colors["blue"],
             foreground=self.colors["white"],
             anchor="w",
@@ -160,23 +113,17 @@ class MainWindow:
 
         style.map(
             "JP.Treeview",
-            background=[
-                ("selected", "#DCEBFA")
-            ],
-            foreground=[
-                ("selected", self.colors["navy"])
-            ]
+            background=[("selected", "#DCEBFA")],
+            foreground=[("selected", self.colors["navy"])]
         )
 
-    # =================================================
-    # ESTRUCTURA PRINCIPAL
-    # =================================================
-
     def build_interface(self):
+
         self.root.configure(
             background=self.colors["background"]
         )
 
+        # Contenedor general
         self.main_container = tk.Frame(
             self.root,
             bg=self.colors["background"]
@@ -187,10 +134,11 @@ class MainWindow:
             expand=True
         )
 
+        # Menú lateral
         self.sidebar = tk.Frame(
             self.main_container,
             bg=self.colors["navy"],
-            width=245
+            width=240
         )
 
         self.sidebar.pack(
@@ -202,6 +150,7 @@ class MainWindow:
 
         self.build_sidebar()
 
+        # Área principal
         self.workspace = tk.Frame(
             self.main_container,
             bg=self.colors["background"]
@@ -215,6 +164,7 @@ class MainWindow:
 
         self.build_topbar()
 
+        # Área dinámica de contenido
         self.content = tk.Frame(
             self.workspace,
             bg=self.colors["background"]
@@ -225,11 +175,9 @@ class MainWindow:
             expand=True
         )
 
-    # =================================================
-    # MENÚ LATERAL
-    # =================================================
-
     def build_sidebar(self):
+
+        # Identidad de la empresa
         brand = tk.Frame(
             self.sidebar,
             bg=self.colors["navy"],
@@ -253,7 +201,7 @@ class MainWindow:
 
         tk.Label(
             brand,
-            text="COTIZACIONES COMERCIALES",
+            text="GESTIÓN DE COTIZACIONES",
             bg=self.colors["navy"],
             fg="#AFC5DF",
             font=("Segoe UI", 8)
@@ -262,15 +210,12 @@ class MainWindow:
             padx=20
         )
 
+        # Separador
         tk.Frame(
             self.sidebar,
             bg="#315276",
             height=1
-        ).pack(
-            fill="x",
-            padx=15,
-            pady=12
-        )
+        ).pack(fill="x", padx=15, pady=12)
 
         tk.Label(
             self.sidebar,
@@ -284,11 +229,11 @@ class MainWindow:
             pady=(5, 10)
         )
 
+        # Opciones de navegación
         menu_items = [
             ("dashboard", "Dashboard"),
             ("clientes", "Clientes"),
             ("empleados", "Empleados"),
-            ("catalogos_personal", "Cargos y Especialidades"),
             ("catalogos", "Productos y servicios"),
             ("parametros", "Parámetros"),
             ("cotizaciones", "Cotizaciones"),
@@ -296,26 +241,23 @@ class MainWindow:
         ]
 
         for page_id, label in menu_items:
+
             button = ttk.Button(
                 self.sidebar,
                 text=label,
                 style="JP.Nav.TButton",
-                command=lambda page=page_id: self.show_page(page)
+                command=lambda p=page_id: self.show_page(p)
             )
 
             button.pack(
                 fill="x",
-                padx=9,
+                padx=10,
                 pady=2
             )
 
             self.navigation_buttons[page_id] = button
 
-        ttk.Button(
-            self.sidebar, text="Conexión / Base de datos", style="JP.Nav.TButton",
-            command=self.show_connection_page
-        ).pack(fill="x", padx=9, pady=(12, 2))
-
+        # Información inferior
         footer = tk.Frame(
             self.sidebar,
             bg=self.colors["navy"]
@@ -340,20 +282,14 @@ class MainWindow:
 
         tk.Label(
             footer,
-            text="Versión 1.1.0",
+            text="Versión 1.0.0",
             bg=self.colors["navy"],
             fg="#718DAA",
             font=("Segoe UI", 8)
-        ).pack(
-            anchor="w",
-            pady=(5, 0)
-        )
-
-    # =================================================
-    # BARRA SUPERIOR
-    # =================================================
+        ).pack(anchor="w", pady=(5, 0))
 
     def build_topbar(self):
+
         topbar = tk.Frame(
             self.workspace,
             bg=self.colors["white"],
@@ -365,6 +301,7 @@ class MainWindow:
         topbar.pack(fill="x")
         topbar.pack_propagate(False)
 
+        # Título del módulo
         self.page_title = tk.Label(
             topbar,
             text="Dashboard",
@@ -378,6 +315,7 @@ class MainWindow:
             padx=25
         )
 
+        # Usuario
         user_container = tk.Frame(
             topbar,
             bg=self.colors["white"]
@@ -404,163 +342,56 @@ class MainWindow:
             font=("Segoe UI", 8)
         ).pack(anchor="e")
 
-    # =================================================
-    # CONEXIÓN E INICIALIZACIÓN DE BASE DE DATOS
-    # =================================================
+    def show_page(self, page_id):
 
-    def show_connection_page(self):
+        # Eliminar vista anterior
         if self.current_page is not None:
             self.current_page.destroy()
-        self.page_title.configure(text="Conexión con MySQL")
-        self.current_module = "connection"
-        self.current_page = ConnectionView(
-            self.content, self.database, self._on_database_ready, self.colors
-        )
-        self.current_page.pack(fill="both", expand=True)
 
-    def _on_database_ready(self, password, result):
-        self.database_password = password  # Solo en memoria durante esta ejecución.
-        messagebox.showinfo(
-            "JP Cotiza listo",
-            f"La base de datos '{result['database']}' está preparada.\n"
-            "Se verificaron las 21 tablas y se instalaron los procedimientos, triggers y catálogos.",
-            parent=self.root,
-        )
-        self.show_page("dashboard")
+        # Actualizar navegación
+        for key, button in self.navigation_buttons.items():
 
-    # =================================================
-    # NAVEGACIÓN
-    # =================================================
+            if key == page_id:
+                button.configure(style="JP.NavActive.TButton")
+            else:
+                button.configure(style="JP.Nav.TButton")
 
-    def show_page(self, page_id):
         pages = {
             "dashboard": "Dashboard",
             "clientes": "Gestión de Clientes",
             "empleados": "Gestión de Empleados",
-            "catalogos_personal": "Cargos y Especialidades",
             "catalogos": "Productos y Servicios",
             "parametros": "Parámetros del Sistema",
             "cotizaciones": "Gestión de Cotizaciones",
             "reportes": "Consultas y Reportes"
         }
 
-        title = pages.get(
-            page_id,
-            "Sistema"
-        )
-
-        password = self.database_password
-        if password is None:
-            self.show_connection_page()
-            return
-
-        if self.current_page is not None:
-            self.current_page.destroy()
-            self.current_page = None
-
-        for key, button in self.navigation_buttons.items():
-            if key == page_id:
-                button.configure(
-                    style="JP.NavActive.TButton"
-                )
-            else:
-                button.configure(
-                    style="JP.Nav.TButton"
-                )
+        title = pages.get(page_id, "Sistema")
 
         self.page_title.configure(text=title)
         self.current_module = page_id
 
         if page_id == "dashboard":
+
             self.current_page = DashboardView(
                 self.content,
                 self.colors,
-                on_new_quote=lambda: self.show_page("cotizaciones"),
-                on_refresh=self._obtener_datos_dashboard
-            )
-            if self.database_password is not None:
-                self.current_page.refresh()
-
-        elif page_id == "clientes":
-            self.current_page = ClientesView(
-                self.content,
-                self.colors,
-                self.cliente_service,
-                password
-            )
-
-        elif page_id == "empleados":
-            self.current_page = EmpleadosView(
-                self.content,
-                self.colors,
-                self.empleado_service,
-                password
-            )
-
-        elif page_id == "catalogos_personal":
-            self.current_page = CatalogosPersonalView(
-                self.content,
-                self.colors,
-                self.catalogo_personal_service,
-                password
-            )
-
-        elif page_id == "catalogos":
-            self.current_page = CatalogosView(
-                self.content,
-                self.colors,
-                self.producto_servicio_service,
-                password
-            )
-
-        elif page_id == "parametros":
-            self.current_page = ParametrosView(
-                self.content,
-                self.colors,
-                self.parametro_service,
-                password
-            )
-
-        elif page_id == "cotizaciones":
-            self.current_page = CotizacionesView(
-                self.content, self.colors, self.cotizacion_service, password,
-                on_saved=self._refrescar_dashboard_si_visible
-            )
-
-        elif page_id == "reportes":
-            self.current_page = ReportesView(
-                self.content, self.colors, self.reporte_service, password
+                on_new_quote=lambda: self.show_page("cotizaciones")
             )
 
         else:
-            messagebox.showwarning("Módulo", "El módulo solicitado no está disponible.", parent=self.root)
-            return
+
+            self.current_page = PlaceholderView(
+                self.content,
+                self.colors,
+                title=title,
+                module_id=page_id
+            )
 
         self.current_page.pack(
             fill="both",
             expand=True
         )
 
-    def _obtener_datos_dashboard(self):
-        password = self.database_password or self.solicitar_password()
-        if password is None:
-            raise ConnectionError("Se canceló la conexión con MySQL.")
-        stats = self.cotizacion_service.resumen_dashboard(password)
-        recent = self.cotizacion_service.recientes(password, 8)
-        return stats, recent
-
-    def _refrescar_dashboard_si_visible(self):
-        if self.current_module == "dashboard" and self.current_page is not None:
-            self.current_page.refresh()
-
-    # =================================================
-    # EJECUCIÓN
-    # =================================================
-
     def run(self):
         self.root.mainloop()
-
-
-if __name__ == "__main__":
-    app = MainWindow()
-    app.run()
