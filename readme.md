@@ -14,13 +14,13 @@ Aplicación de escritorio para la gestión de cotizaciones comerciales de J.P. I
 ## Inicio
 
 1. Instala e inicia MySQL Server 8.0+.
-2. Ejecuta `JP_Cotiza.exe` (o `python main.py` en desarrollo).
+2. Ejecuta `COTIZEP.exe` (o `python main.py` en desarrollo).
 3. En la pantalla inicial introduce host, puerto, base de datos, usuario y contraseña MySQL.
 4. Pulsa **Conectar e inicializar COTIZEP**.
 5. Si la base no existe, el asistente la crea e instala las 21 tablas. Luego verifica/instala los procedimientos y triggers y ejecuta los catálogos iniciales idempotentes.
 6. Registra al menos un cliente, un empleado responsable y productos/servicios antes de crear una cotización.
 
-La contraseña no se guarda. Los parámetros de conexión se almacenan en `%APPDATA%\JP_Cotiza\database.ini` en Windows o `~/.config/jp_cotiza/database.ini` en Linux.
+La contraseña no se guarda. Los parámetros de conexión se almacenan en `%APPDATA%\COTIZEP\database.ini` en Windows o `~/.config/COTIZEP/database.ini` en Linux.
 
 ## Cotizaciones
 
@@ -32,7 +32,7 @@ La aplicación incluye los diez reportes definidos en `database/sql/04_consultas
 
 ## Ejecutable Windows
 
-En Windows, abre la carpeta del proyecto y ejecuta `build_windows.bat`. El script crea un entorno de compilación, instala dependencias y genera `dist\JP_Cotiza.exe` mediante PyInstaller. El EXE se construye en Windows; no es posible generar un binario Windows válido desde un entorno Linux.
+En Windows, abre la carpeta del proyecto y ejecuta `build_windows.bat`. El script crea un entorno de compilación, instala dependencias y genera `dist\COTIZEP.exe` mediante PyInstaller. El EXE se construye en Windows; no es posible generar un binario Windows válido desde un entorno Linux.
 
 ## Pruebas
 
