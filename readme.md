@@ -1,4 +1,4 @@
-# JP Cotiza 1.1.0
+# COTIZEP v1.2
 
 Aplicación de escritorio para la gestión de cotizaciones comerciales de J.P. Ingeniería y Servicios S.R.L.
 
@@ -9,14 +9,14 @@ Aplicación de escritorio para la gestión de cotizaciones comerciales de J.P. I
 - Para el primer inicio, una cuenta administradora de MySQL con permisos `CREATE`, `CREATE ROUTINE`, `TRIGGER`, `SELECT`, `INSERT`, `UPDATE`, `DELETE` y `EXECUTE` sobre la base que se instalará.
 - Para el uso diario, puede utilizarse una cuenta de aplicación con permisos DML y `EXECUTE`.
 
-> MySQL Server es necesario. JP Cotiza ya no requiere Docker y no utiliza SQLite para simular la base, porque el flujo depende de procedimientos almacenados y triggers propios de MySQL.
+> MySQL Server es necesario. COTIZEP ya no requiere Docker y no utiliza SQLite para simular la base, porque el flujo depende de procedimientos almacenados y triggers propios de MySQL.
 
 ## Inicio
 
 1. Instala e inicia MySQL Server 8.0+.
 2. Ejecuta `JP_Cotiza.exe` (o `python main.py` en desarrollo).
 3. En la pantalla inicial introduce host, puerto, base de datos, usuario y contraseña MySQL.
-4. Pulsa **Conectar e inicializar JP Cotiza**.
+4. Pulsa **Conectar e inicializar COTIZEP**.
 5. Si la base no existe, el asistente la crea e instala las 21 tablas. Luego verifica/instala los procedimientos y triggers y ejecuta los catálogos iniciales idempotentes.
 6. Registra al menos un cliente, un empleado responsable y productos/servicios antes de crear una cotización.
 
